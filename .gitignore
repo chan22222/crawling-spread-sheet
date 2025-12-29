@@ -1,0 +1,10 @@
+node_modules/
+captures/
+.env
+*.log
+
+# Google API 키 및 토큰 (절대 커밋 금지)
+credentials.json
+token.json/
+*.pem
+*.key

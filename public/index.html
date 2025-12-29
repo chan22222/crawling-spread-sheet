@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crawling Spread Sheet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #0ea5e9;
+            --accent: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --dark: #1a1f2e;
+            --dark-light: #252b3d;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --white: #ffffff;
+            --glass: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark);
+            min-height: 100vh;
+            color: var(--gray-300);
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.25) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.25) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(14, 165, 233, 0.2) 0%, transparent 40%);
+            animation: bgMove 20s ease-in-out infinite;
+        }
+
+        @keyframes bgMove {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(1deg); }
+            66% { transform: translate(-20px, 20px) rotate(-1deg); }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+        }
+
+        .logo-icon svg {
+            width: 28px;
+            height: 28px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--white) 0%, var(--gray-400) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: var(--gray-500);
+            font-size: 1rem;
+            margin-top: 8px;
+        }
+
+        /* Card */
+        .card {
+            background: linear-gradient(135deg, rgba(37, 43, 61, 0.95) 0%, rgba(30, 35, 50, 0.9) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .card-number {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: white;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        /* Form */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-300);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            font-size: 14px;
+            color: var(--white);
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .form-group input::placeholder {
+            color: var(--gray-500);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+            background: rgba(15, 23, 42, 1);
+        }
+
+        .info-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--gray-400);
+            font-size: 13px;
+            margin-top: 16px;
+        }
+
+        .info-text svg {
+            width: 16px;
+            height: 16px;
+            color: var(--gray-400);
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, var(--accent) 0%, #7c3aed 100%);
+            color: white;
+            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            margin: 20px -16px;
+            padding: 0 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray-300);
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        th:first-child {
+            border-radius: 12px 0 0 0;
+        }
+
+        th:last-child {
+            border-radius: 0 12px 0 0;
+        }
+
+        td {
+            padding: 16px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--gray-200);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .link-cell {
+            max-width: 280px;
+        }
+
+        .link-cell a {
+            color: var(--secondary);
+            text-decoration: none;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            transition: color 0.2s;
+        }
+
+        .link-cell a:hover {
+            color: var(--primary);
+        }
+
+        /* Checkbox */
+        .checkbox-cell {
+            width: 50px;
+            text-align: center;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .select-all-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .select-all-container label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--gray-200);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .select-count {
+            color: #a5b4fc;
+            font-weight: 600;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .status-processing {
+            background: rgba(14, 165, 233, 0.15);
+            color: var(--secondary);
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+        }
+
+        /* Progress */
+        .progress-section {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--dark-light);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 10px;
+        }
+
+        .progress-text {
+            font-size: 14px;
+            color: var(--gray-300);
+        }
+
+        .progress-percentage {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 8px;
+        }
+
+        /* Result Preview */
+        .result-summary {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .result-summary svg {
+            width: 24px;
+            height: 24px;
+            color: var(--success);
+        }
+
+        .result-summary p {
+            color: var(--success);
+            font-weight: 500;
+        }
+
+        .result-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .preview-item {
+            background: var(--dark-light);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s ease;
+        }
+
+        .preview-item:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .preview-info {
+            padding: 16px;
+        }
+
+        .preview-info h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--white);
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .preview-info p {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--dark-light);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gray-600);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-500);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h1>Crawling Spread Sheet</h1>
+            </div>
+            <p class="subtitle">스프레드시트 크롤링 및 블로그 링크 스크린샷 자동화</p>
+        </header>
+
+        <!-- Step 1: Spreadsheet Settings -->
+        <div class="card fade-in">
+            <div class="card-header">
+                <div class="card-number">1</div>
+                <h2>스프레드시트 설정</h2>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>스프레드시트 URL 또는 ID</label>
+                    <input type="text" id="spreadsheetId" placeholder="URL 전체 또는 /d/ 와 /edit 사이의 ID 값">
+                </div>
+                <div class="form-group">
+                    <label>시트 이름</label>
+                    <input type="text" id="sheetName" placeholder="예: Sheet1" value="Sheet1">
+                </div>
+                <div class="form-group">
+                    <label>범위</label>
+                    <input type="text" id="range" placeholder="예: A2:Z500" value="A2:Z500">
+                </div>
+            </div>
+            <div class="info-text">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>데이터 형식: 날짜 | 이름 | 링크 | 제목</span>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-primary" id="fetchBtn" onclick="fetchSheetData()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    데이터 불러오기
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Data List -->
+        <div class="card fade-in" id="dataCard" style="display: none;">
+            <div class="card-header">
+                <div class="card-number">2</div>
+                <h2>데이터 목록</h2>
+            </div>
+            <div class="select-all-container">
+                <label>
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                    전체 선택
+                </label>
+                <span class="select-count">(<span id="selectedCount">0</span>/<span id="totalCount">0</span>개 선택됨)</span>
+            </div>
+            <div class="table-container">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th class="checkbox-cell"></th>
+                            <th>번호</th>
+                            <th>날짜</th>
+                            <th>이름</th>
+                            <th>링크</th>
+                            <th>제목</th>
+                            <th>상태</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-success" id="captureBtn" onclick="startCapture()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    선택 항목 캡처 시작
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Progress -->
+        <div class="card fade-in" id="progressCard" style="display: none;">
+            <div class="card-header">
+                <div class="card-number">3</div>
+                <h2>캡처 진행 상황</h2>
+            </div>
+            <div class="progress-section">
+                <div class="progress-percentage" id="progressPercent">0%</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressText">준비 중...</p>
+            </div>
+        </div>
+
+        <!-- Step 4: Results -->
+        <div class="card fade-in" id="resultCard" style="display: none;">
+            <div class="card-header">
+                <div class="card-number">4</div>
+                <h2>캡처 결과</h2>
+            </div>
+            <div class="result-summary" id="resultSummary">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p id="resultText"></p>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-download" id="downloadBtn" onclick="downloadExcel()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    엑셀로 다운로드
+                </button>
+            </div>
+            <div class="result-preview" id="resultPreview"></div>
+        </div>
+    </div>
+
+    <script>
+        let sheetData = [];
+        let currentSessionId = null;
+        let captureResults = [];
+
+        // 로컬스토리지에서 설정 불러오기
+        function loadSettings() {
+            const savedId = localStorage.getItem('spreadsheetId');
+            const savedSheet = localStorage.getItem('sheetName');
+            const savedRange = localStorage.getItem('range');
+
+            if (savedId) document.getElementById('spreadsheetId').value = savedId;
+            if (savedSheet) document.getElementById('sheetName').value = savedSheet;
+            if (savedRange) document.getElementById('range').value = savedRange;
+        }
+
+        // 로컬스토리지에 설정 저장
+        function saveSettings() {
+            localStorage.setItem('spreadsheetId', document.getElementById('spreadsheetId').value);
+            localStorage.setItem('sheetName', document.getElementById('sheetName').value);
+            localStorage.setItem('range', document.getElementById('range').value);
+        }
+
+        // 페이지 로드시 설정 불러오기
+        document.addEventListener('DOMContentLoaded', loadSettings);
+
+        // URL에서 스프레드시트 ID 추출
+        function extractSpreadsheetId(input) {
+            if (!input.includes('/')) {
+                return input;
+            }
+            const match = input.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            return match ? match[1] : input;
+        }
+
+        async function fetchSheetData() {
+            const rawInput = document.getElementById('spreadsheetId').value.trim();
+            const spreadsheetId = extractSpreadsheetId(rawInput);
+            const sheetName = document.getElementById('sheetName').value.trim();
+            const range = document.getElementById('range').value.trim();
+
+            if (!spreadsheetId) {
+                alert('스프레드시트 URL 또는 ID를 입력해주세요.');
+                return;
+            }
+
+            // 설정 저장
+            saveSettings();
+
+            const btn = document.getElementById('fetchBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 불러오는 중...';
+
+            try {
+                const response = await fetch('/api/fetch-sheet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ spreadsheetId, sheetName, range })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    sheetData = result.data;
+                    renderDataTable();
+                    document.getElementById('dataCard').style.display = 'block';
+                } else {
+                    alert('오류: ' + result.error);
+                }
+            } catch (error) {
+                alert('서버 연결 오류: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    데이터 불러오기
+                `;
+            }
+        }
+
+        function renderDataTable() {
+            const tbody = document.querySelector('#dataTable tbody');
+            tbody.innerHTML = '';
+
+            sheetData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="checkbox-cell">
+                        <input type="checkbox" class="item-checkbox" data-index="${index}" onchange="updateSelectedCount()">
+                    </td>
+                    <td>${item.index}</td>
+                    <td>${item.date}</td>
+                    <td>${item.name}</td>
+                    <td class="link-cell"><a href="${item.link}" target="_blank">${item.link}</a></td>
+                    <td>${item.title}</td>
+                    <td><span class="status-badge status-pending" id="status-${index}">대기</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('totalCount').textContent = sheetData.length;
+            updateSelectedCount();
+        }
+
+        function toggleSelectAll() {
+            const checked = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = checked);
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const count = document.querySelectorAll('.item-checkbox:checked').length;
+            document.getElementById('selectedCount').textContent = count;
+        }
+
+        async function startCapture() {
+            const selectedIndexes = [];
+            document.querySelectorAll('.item-checkbox:checked').forEach(cb => {
+                selectedIndexes.push(parseInt(cb.dataset.index));
+            });
+
+            if (selectedIndexes.length === 0) {
+                alert('캡처할 항목을 선택해주세요.');
+                return;
+            }
+
+            const selectedItems = selectedIndexes.map(i => sheetData[i]);
+
+            const btn = document.getElementById('captureBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 캡처 중...';
+
+            document.getElementById('progressCard').style.display = 'block';
+            document.getElementById('resultCard').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+
+            // 상태 업데이트
+            selectedIndexes.forEach(i => {
+                document.getElementById(`status-${i}`).className = 'status-badge status-processing';
+                document.getElementById(`status-${i}`).textContent = '처리 중';
+            });
+
+            try {
+                const response = await fetch('/api/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: selectedItems })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentSessionId = result.sessionId;
+
+                    result.results.forEach((r, i) => {
+                        const originalIndex = selectedIndexes[i];
+                        const statusEl = document.getElementById(`status-${originalIndex}`);
+                        if (r.success) {
+                            statusEl.className = 'status-badge status-success';
+                            statusEl.textContent = '완료';
+                        } else {
+                            statusEl.className = 'status-badge status-error';
+                            statusEl.textContent = '실패';
+                        }
+                    });
+
+                    document.getElementById('progressFill').style.width = '100%';
+                    document.getElementById('progressPercent').textContent = '100%';
+                    document.getElementById('progressText').textContent = `완료! ${result.successCount}/${result.totalCount}개 성공`;
+
+                    showResults(result);
+                } else {
+                    alert('캡처 오류: ' + result.error);
+                }
+            } catch (error) {
+                alert('서버 연결 오류: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    선택 항목 캡처 시작
+                `;
+            }
+        }
+
+        function showResults(result) {
+            document.getElementById('resultCard').style.display = 'block';
+            document.getElementById('resultText').textContent = `총 ${result.totalCount}개 중 ${result.successCount}개 캡처 성공`;
+
+            // 엑셀 다운로드를 위해 결과 저장
+            captureResults = result.results;
+
+            const preview = document.getElementById('resultPreview');
+            preview.innerHTML = '';
+
+            result.results.filter(r => r.success).forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `
+                    <img src="/api/image/${result.sessionId}/${r.filename}" alt="${r.name}">
+                    <div class="preview-info">
+                        <h4>${r.blogTitle || r.title}</h4>
+                        <p>${r.date} - ${r.name}</p>
+                    </div>
+                `;
+                preview.appendChild(div);
+            });
+        }
+
+        function downloadExcel() {
+            if (!currentSessionId || captureResults.length === 0) {
+                alert('다운로드할 캡처가 없습니다.');
+                return;
+            }
+
+            const btn = document.getElementById('downloadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 엑셀 생성 중...';
+
+            fetch(`/api/download-excel/${currentSessionId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ results: captureResults })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `captures_${currentSessionId}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            })
+            .catch(error => {
+                alert('다운로드 오류: ' + error.message);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    엑셀로 다운로드
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
