@@ -39,12 +39,18 @@ app.get('/auth', (req, res) => {
     const host = req.headers['x-forwarded-host'] || req.get('host');
     const actualRedirectUri = `${protocol}://${host}`;
 
+    console.log('=== AUTH DEBUG ===');
+    console.log('Protocol:', protocol);
+    console.log('Host:', host);
+    console.log('Redirect URI:', actualRedirectUri);
+
     const oauth2Client = getOAuthClient(actualRedirectUri);
     const authUrl = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
         prompt: 'consent'
     });
+    console.log('Auth URL:', authUrl);
     res.redirect(authUrl);
 });
 
@@ -57,10 +63,13 @@ async function handleOAuthCallback(req, res) {
         return res.status(400).send('인증 코드가 없습니다.');
     }
     try {
-        // 토큰 교환 시에도 동일한 redirect_uri 사용해야 함
+        // 토큰 교환 시에도 동일한 redirect_uri 사용해야 함 (루트 URL, 경로 없이)
         const protocol = req.headers['x-forwarded-proto'] || req.protocol;
         const host = req.headers['x-forwarded-host'] || req.get('host');
+        // 중요: Google Cloud Console에 등록된 것과 정확히 일치해야 함 (경로 없이)
         const actualRedirectUri = `${protocol}://${host}`;
+
+        console.log('Token exchange with redirect_uri:', actualRedirectUri);
 
         const oauth2Client = getOAuthClient(actualRedirectUri);
         const { tokens } = await oauth2Client.getToken(code);
@@ -211,9 +220,15 @@ app.post('/api/capture', async (req, res) => {
 
     try {
         browser = await puppeteer.launch({
-            headless: true,
+            headless: 'new',
             executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1200,900']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--window-size=1200,900'
+            ]
         });
 
         for (let i = 0; i < items.length; i++) {
@@ -224,10 +239,16 @@ app.post('/api/capture', async (req, res) => {
             try {
                 console.log(`캡처 중 (${i + 1}/${items.length}): ${item.link}`);
 
+                // User-Agent 설정 (봇 차단 우회)
+                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
                 await page.goto(item.link, {
-                    waitUntil: 'networkidle2',
-                    timeout: 30000
+                    waitUntil: 'domcontentloaded',
+                    timeout: 60000
                 });
+
+                // 페이지 로딩 대기
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
                 // 네이버 블로그 제목 추출 및 제목 영역까지의 높이 계산
                 let blogTitle = '';
