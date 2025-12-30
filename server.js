@@ -25,8 +25,11 @@ async function getAuthClient() {
 
     // 환경변수 또는 파일에서 읽기
     if (process.env.GOOGLE_CREDENTIALS) {
-        credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-        token = JSON.parse(process.env.GOOGLE_TOKEN);
+        // 줄바꿈만 제거 후 파싱
+        const credStr = process.env.GOOGLE_CREDENTIALS.replace(/[\r\n]+/g, '').trim();
+        const tokenStr = process.env.GOOGLE_TOKEN.replace(/[\r\n]+/g, '').trim();
+        credentials = JSON.parse(credStr);
+        token = JSON.parse(tokenStr);
     } else {
         // 로컬 파일 사용 (개발용)
         const CREDENTIALS_PATH = path.join(__dirname, '..', 'credentials.json');
