@@ -743,8 +743,18 @@
             localStorage.setItem('range', document.getElementById('range').value);
         }
 
-        // 페이지 로드시 설정 불러오기
-        document.addEventListener('DOMContentLoaded', loadSettings);
+        // 페이지 로드시 설정 불러오기 및 OAuth 콜백 처리
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+
+            // OAuth 콜백 처리 (URL에 code가 있으면)
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code) {
+                // code를 서버로 전달
+                window.location.href = '/oauth2callback?code=' + encodeURIComponent(code);
+            }
+        });
 
         // URL에서 스프레드시트 ID 추출
         function extractSpreadsheetId(input) {

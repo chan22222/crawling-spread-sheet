@@ -27,9 +27,8 @@ function getOAuthClient() {
         credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
     }
     const creds = credentials.installed || credentials.web;
-    const redirectUri = process.env.RENDER_EXTERNAL_URL
-        ? `${process.env.RENDER_EXTERNAL_URL}/auth/callback`
-        : creds.redirect_uris[0];
+    // redirect_uri는 credentials에 등록된 것 사용
+    const redirectUri = creds.redirect_uris[0];
     return new google.auth.OAuth2(creds.client_id, creds.client_secret, redirectUri);
 }
 
@@ -44,8 +43,10 @@ app.get('/auth', (req, res) => {
     res.redirect(authUrl);
 });
 
-// OAuth 콜백
-app.get('/auth/callback', async (req, res) => {
+// OAuth 콜백 (루트에서도 처리)
+app.get('/oauth2callback', handleOAuthCallback);
+
+async function handleOAuthCallback(req, res) {
     const { code } = req.query;
     if (!code) {
         return res.status(400).send('인증 코드가 없습니다.');
@@ -72,7 +73,7 @@ app.get('/auth/callback', async (req, res) => {
     } catch (error) {
         res.status(500).send('토큰 발급 실패: ' + error.message);
     }
-});
+}
 
 // 인증 상태 확인
 app.get('/auth/status', (req, res) => {
