@@ -892,29 +892,79 @@
                 if (result.success) {
                     currentSessionId = result.sessionId;
 
-                    result.results.forEach((r, i) => {
-                        const originalIndex = selectedIndexes[i];
-                        const statusEl = document.getElementById(`status-${originalIndex}`);
-                        if (r.success) {
-                            statusEl.className = 'status-badge status-success';
-                            statusEl.textContent = '완료';
-                        } else {
-                            statusEl.className = 'status-badge status-error';
-                            statusEl.textContent = '실패';
+                    // SSE로 진행 상황 실시간 수신
+                    const eventSource = new EventSource(`/api/capture-progress/${result.sessionId}`);
+
+                    eventSource.onmessage = (event) => {
+                        const progress = JSON.parse(event.data);
+                        const percent = Math.round((progress.current / progress.total) * 100);
+
+                        document.getElementById('progressFill').style.width = `${percent}%`;
+                        document.getElementById('progressPercent').textContent = `${percent}%`;
+
+                        if (progress.currentItem) {
+                            document.getElementById('progressText').textContent = `캡처 중... ${progress.current}/${progress.total} (${progress.currentItem})`;
                         }
-                    });
 
-                    document.getElementById('progressFill').style.width = '100%';
-                    document.getElementById('progressPercent').textContent = '100%';
-                    document.getElementById('progressText').textContent = `완료! ${result.successCount}/${result.totalCount}개 성공`;
+                        // 각 항목 상태 업데이트
+                        progress.results.forEach((r, i) => {
+                            const originalIndex = selectedIndexes[i];
+                            const statusEl = document.getElementById(`status-${originalIndex}`);
+                            if (statusEl) {
+                                if (r.success) {
+                                    statusEl.className = 'status-badge status-success';
+                                    statusEl.textContent = '완료';
+                                } else {
+                                    statusEl.className = 'status-badge status-error';
+                                    statusEl.textContent = '실패';
+                                }
+                            }
+                        });
 
-                    showResults(result);
+                        // 완료 시
+                        if (progress.done) {
+                            eventSource.close();
+
+                            if (progress.error) {
+                                alert('캡처 오류: ' + progress.error);
+                            } else {
+                                document.getElementById('progressText').textContent = `완료! ${progress.successCount}/${progress.total}개 성공`;
+                                captureResults = progress.results;
+                                showResults({
+                                    sessionId: currentSessionId,
+                                    results: progress.results,
+                                    totalCount: progress.total,
+                                    successCount: progress.successCount
+                                });
+                            }
+
+                            btn.disabled = false;
+                            btn.innerHTML = `
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                선택 항목 캡처 시작
+                            `;
+                        }
+                    };
+
+                    eventSource.onerror = () => {
+                        eventSource.close();
+                    };
                 } else {
                     alert('캡처 오류: ' + result.error);
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        선택 항목 캡처 시작
+                    `;
                 }
             } catch (error) {
                 alert('서버 연결 오류: ' + error.message);
-            } finally {
                 btn.disabled = false;
                 btn.innerHTML = `
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">

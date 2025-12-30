@@ -202,6 +202,37 @@ function createAddressBarHTML(url) {
     `;
 }
 
+// 진행 상황 저장 (세션별)
+const captureProgress = new Map();
+
+// 진행 상황 SSE 엔드포인트
+app.get('/api/capture-progress/:sessionId', (req, res) => {
+    const { sessionId } = req.params;
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const sendProgress = () => {
+        const progress = captureProgress.get(sessionId);
+        if (progress) {
+            res.write(`data: ${JSON.stringify(progress)}\n\n`);
+            if (progress.done) {
+                res.end();
+                return;
+            }
+        }
+    };
+
+    // 100ms마다 진행 상황 확인
+    const interval = setInterval(sendProgress, 100);
+
+    req.on('close', () => {
+        clearInterval(interval);
+    });
+});
+
 // 블로그 스크린샷 캡처
 app.post('/api/capture', async (req, res) => {
     const { items } = req.body;
@@ -214,6 +245,12 @@ app.post('/api/capture', async (req, res) => {
     const sessionId = Date.now().toString();
     const sessionDir = path.join(CAPTURES_DIR, sessionId);
     fs.mkdirSync(sessionDir, { recursive: true });
+
+    // 즉시 sessionId 반환
+    res.json({ success: true, sessionId, totalCount: items.length });
+
+    // 진행 상황 초기화
+    captureProgress.set(sessionId, { current: 0, total: items.length, results: [], done: false });
 
     let browser;
     const results = [];
@@ -352,19 +389,39 @@ app.post('/api/capture', async (req, res) => {
 
                 await combinedPage.close();
 
-                results.push({
+                const result = {
                     ...item,
                     blogTitle,
                     filename,
                     success: true
+                };
+                results.push(result);
+
+                // 진행 상황 업데이트
+                captureProgress.set(sessionId, {
+                    current: i + 1,
+                    total: items.length,
+                    results: [...results],
+                    done: false,
+                    currentItem: item.name
                 });
 
             } catch (error) {
                 console.error(`캡처 실패: ${item.link}`, error.message);
-                results.push({
+                const result = {
                     ...item,
                     error: error.message,
                     success: false
+                };
+                results.push(result);
+
+                // 진행 상황 업데이트 (실패도 포함)
+                captureProgress.set(sessionId, {
+                    current: i + 1,
+                    total: items.length,
+                    results: [...results],
+                    done: false,
+                    currentItem: item.name
                 });
             } finally {
                 await page.close();
@@ -373,16 +430,24 @@ app.post('/api/capture', async (req, res) => {
 
     } catch (error) {
         console.error('브라우저 오류:', error);
-        return res.status(500).json({ success: false, error: error.message });
+        captureProgress.set(sessionId, {
+            current: 0,
+            total: items.length,
+            results: [],
+            done: true,
+            error: error.message
+        });
+        return;
     } finally {
         if (browser) await browser.close();
     }
 
-    res.json({
-        success: true,
-        sessionId,
+    // 완료 상태 저장
+    captureProgress.set(sessionId, {
+        current: items.length,
+        total: items.length,
         results,
-        totalCount: items.length,
+        done: true,
         successCount: results.filter(r => r.success).length
     });
 });
