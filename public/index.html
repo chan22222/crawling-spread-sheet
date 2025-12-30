@@ -860,6 +860,10 @@
 
             const selectedItems = selectedIndexes.map(i => sheetData[i]);
 
+            // 이전 결과 초기화
+            currentSessionId = null;
+            captureResults = [];
+
             const btn = document.getElementById('captureBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="loading"></span> 캡처 중...';
@@ -868,6 +872,7 @@
             document.getElementById('resultCard').style.display = 'none';
             document.getElementById('progressFill').style.width = '0%';
             document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressText').textContent = `캡처 중... (0/${selectedItems.length})`;
 
             // 상태 업데이트
             selectedIndexes.forEach(i => {
