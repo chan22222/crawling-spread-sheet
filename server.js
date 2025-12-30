@@ -38,7 +38,9 @@ async function getAuthClient() {
         token = JSON.parse(fs.readFileSync(TOKEN_PATH));
     }
 
-    const { client_id, client_secret, redirect_uris } = credentials.installed;
+    // installed 또는 web 타입 모두 지원
+    const creds = credentials.installed || credentials.web;
+    const { client_id, client_secret, redirect_uris } = creds;
     const oauth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
     oauth2Client.setCredentials({
