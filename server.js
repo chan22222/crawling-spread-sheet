@@ -13,6 +13,77 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// 메모리에 토큰 저장 (서버 재시작시 초기화됨)
+let memoryToken = null;
+
+// OAuth 클라이언트 가져오기
+function getOAuthClient() {
+    let credentials;
+    if (process.env.GOOGLE_CREDENTIALS) {
+        const credStr = process.env.GOOGLE_CREDENTIALS.replace(/[\r\n]+/g, '').trim();
+        credentials = JSON.parse(credStr);
+    } else {
+        const CREDENTIALS_PATH = path.join(__dirname, '..', 'credentials.json');
+        credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
+    }
+    const creds = credentials.installed || credentials.web;
+    const redirectUri = process.env.RENDER_EXTERNAL_URL
+        ? `${process.env.RENDER_EXTERNAL_URL}/auth/callback`
+        : creds.redirect_uris[0];
+    return new google.auth.OAuth2(creds.client_id, creds.client_secret, redirectUri);
+}
+
+// OAuth 인증 시작
+app.get('/auth', (req, res) => {
+    const oauth2Client = getOAuthClient();
+    const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+        prompt: 'consent'
+    });
+    res.redirect(authUrl);
+});
+
+// OAuth 콜백
+app.get('/auth/callback', async (req, res) => {
+    const { code } = req.query;
+    if (!code) {
+        return res.status(400).send('인증 코드가 없습니다.');
+    }
+    try {
+        const oauth2Client = getOAuthClient();
+        const { tokens } = await oauth2Client.getToken(code);
+        memoryToken = tokens;
+
+        // 토큰을 화면에 표시
+        res.send(`
+            <html>
+            <head><title>토큰 발급 완료</title></head>
+            <body style="font-family: Arial; padding: 20px;">
+                <h1>토큰 발급 완료!</h1>
+                <p>아래 토큰을 Render 환경변수 <strong>GOOGLE_TOKEN</strong>에 넣으세요:</p>
+                <textarea style="width:100%; height:150px; font-size:12px;">${JSON.stringify(tokens)}</textarea>
+                <br><br>
+                <p>환경변수 설정 후 서버를 재배포하면 영구적으로 사용할 수 있습니다.</p>
+                <p>지금 바로 테스트하려면 <a href="/">메인 페이지</a>로 이동하세요. (서버 재시작 전까지만 유효)</p>
+            </body>
+            </html>
+        `);
+    } catch (error) {
+        res.status(500).send('토큰 발급 실패: ' + error.message);
+    }
+});
+
+// 인증 상태 확인
+app.get('/auth/status', (req, res) => {
+    const hasEnvToken = !!process.env.GOOGLE_TOKEN;
+    const hasMemoryToken = !!memoryToken;
+    res.json({
+        authenticated: hasEnvToken || hasMemoryToken,
+        source: hasEnvToken ? 'environment' : (hasMemoryToken ? 'memory' : 'none')
+    });
+});
+
 // 캡처 저장 폴더
 const CAPTURES_DIR = path.join(__dirname, 'captures');
 if (!fs.existsSync(CAPTURES_DIR)) {
@@ -21,28 +92,21 @@ if (!fs.existsSync(CAPTURES_DIR)) {
 
 // OAuth2 클라이언트 생성
 async function getAuthClient() {
-    let credentials, token;
+    let token;
 
-    // 환경변수 또는 파일에서 읽기
-    if (process.env.GOOGLE_CREDENTIALS) {
-        // 줄바꿈만 제거 후 파싱
-        const credStr = process.env.GOOGLE_CREDENTIALS.replace(/[\r\n]+/g, '').trim();
+    // 토큰 우선순위: 메모리 > 환경변수 > 로컬파일
+    if (memoryToken) {
+        token = memoryToken;
+    } else if (process.env.GOOGLE_TOKEN) {
         const tokenStr = process.env.GOOGLE_TOKEN.replace(/[\r\n]+/g, '').trim();
-        credentials = JSON.parse(credStr);
         token = JSON.parse(tokenStr);
     } else {
         // 로컬 파일 사용 (개발용)
-        const CREDENTIALS_PATH = path.join(__dirname, '..', 'credentials.json');
         const TOKEN_PATH = path.join(__dirname, '..', 'token.json', 'Google.Apis.Auth.OAuth2.Responses.TokenResponse-user');
-        credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
         token = JSON.parse(fs.readFileSync(TOKEN_PATH));
     }
 
-    // installed 또는 web 타입 모두 지원
-    const creds = credentials.installed || credentials.web;
-    const { client_id, client_secret, redirect_uris } = creds;
-    const oauth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-
+    const oauth2Client = getOAuthClient();
     oauth2Client.setCredentials({
         access_token: token.access_token,
         refresh_token: token.refresh_token,
