@@ -274,14 +274,14 @@ app.post('/api/capture', async (req, res) => {
                 '--mute-audio',
                 '--hide-scrollbars',
                 '--metrics-recording-only',
-                '--window-size=1200,900'
+                '--window-size=800,600'
             ]
         });
 
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
             const page = await browser.newPage();
-            await page.setViewport({ width: 1200, height: 900 });
+            await page.setViewport({ width: 800, height: 600 });
 
             try {
                 console.log(`캡처 중 (${i + 1}/${items.length}): ${item.link}`);
@@ -354,7 +354,7 @@ app.post('/api/capture', async (req, res) => {
                     clip: {
                         x: 0,
                         y: 0,
-                        width: 1200,
+                        width: 800,
                         height: titleBottom
                     },
                     encoding: 'base64'
@@ -365,19 +365,19 @@ app.post('/api/capture', async (req, res) => {
                 const addressBarHeight = 84;
                 const totalHeight = addressBarHeight + titleBottom;
 
-                await combinedPage.setViewport({ width: 1200, height: totalHeight });
+                await combinedPage.setViewport({ width: 800, height: totalHeight });
                 await combinedPage.setContent(`
                     <!DOCTYPE html>
                     <html>
                     <head>
                         <style>
                             * { margin: 0; padding: 0; }
-                            body { width: 1200px; height: ${totalHeight}px; }
+                            body { width: 800px; height: ${totalHeight}px; }
                         </style>
                     </head>
                     <body>
                         ${createAddressBarHTML(item.link)}
-                        <img src="data:image/png;base64,${contentScreenshot}" style="width: 1200px; display: block;">
+                        <img src="data:image/png;base64,${contentScreenshot}" style="width: 800px; display: block;">
                     </body>
                     </html>
                 `, { waitUntil: 'networkidle0' });
