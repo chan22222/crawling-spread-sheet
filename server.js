@@ -17,7 +17,7 @@ app.use(express.static('public'));
 let memoryToken = null;
 
 // OAuth 클라이언트 가져오기
-function getOAuthClient() {
+function getOAuthClient(customRedirectUri) {
     let credentials;
     if (process.env.GOOGLE_CREDENTIALS) {
         const credStr = process.env.GOOGLE_CREDENTIALS.replace(/[\r\n]+/g, '').trim();
@@ -27,14 +27,19 @@ function getOAuthClient() {
         credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
     }
     const creds = credentials.installed || credentials.web;
-    // redirect_uri는 credentials에 등록된 것 사용
-    const redirectUri = creds.redirect_uris[0];
+    // customRedirectUri가 있으면 그것을 사용, 없으면 credentials의 것 사용
+    const redirectUri = customRedirectUri || creds.redirect_uris[0];
     return new google.auth.OAuth2(creds.client_id, creds.client_secret, redirectUri);
 }
 
 // OAuth 인증 시작
 app.get('/auth', (req, res) => {
-    const oauth2Client = getOAuthClient();
+    // Render에서는 실제 호스트 기반 redirect_uri 사용
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const actualRedirectUri = `${protocol}://${host}`;
+
+    const oauth2Client = getOAuthClient(actualRedirectUri);
     const authUrl = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
@@ -52,7 +57,12 @@ async function handleOAuthCallback(req, res) {
         return res.status(400).send('인증 코드가 없습니다.');
     }
     try {
-        const oauth2Client = getOAuthClient();
+        // 토큰 교환 시에도 동일한 redirect_uri 사용해야 함
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.headers['x-forwarded-host'] || req.get('host');
+        const actualRedirectUri = `${protocol}://${host}`;
+
+        const oauth2Client = getOAuthClient(actualRedirectUri);
         const { tokens } = await oauth2Client.getToken(code);
         memoryToken = tokens;
 
