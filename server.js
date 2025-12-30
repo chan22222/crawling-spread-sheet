@@ -227,6 +227,16 @@ app.post('/api/capture', async (req, res) => {
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
+                '--single-process',
+                '--no-zygote',
+                '--disable-extensions',
+                '--disable-background-networking',
+                '--disable-default-apps',
+                '--disable-sync',
+                '--disable-translate',
+                '--mute-audio',
+                '--hide-scrollbars',
+                '--metrics-recording-only',
                 '--window-size=1200,900'
             ]
         });
